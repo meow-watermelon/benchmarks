@@ -1,10 +1,7 @@
 #!/usr/bin/env lua
 
 --[[
-	example:
-
-	number: abcdwxyz
-	find numbers if (abcd + wxyz)^2 == abcdwxyz
+	find Kaprekar numbers
 --]]
 
 local init = 1000
