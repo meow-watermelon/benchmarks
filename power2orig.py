@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 '''
 find Kaprekar numbers
@@ -13,7 +13,7 @@ while True:
     if len(str(init)) % 2 != 0:
         init = init * 10
 
-    splitter = len(str(init)) / 2
+    splitter = int(len(str(init)) / 2)
     fore = str(init)[:splitter]
     post = str(init)[splitter:]
 
