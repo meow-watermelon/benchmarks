@@ -1,19 +1,20 @@
 /*
 # gcc compilation command
-$ gcc -Wall -lm -o power2orig power2orig.c
+$ gcc -Wall -o power2orig power2orig.c
 */
-
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#define STRING_SIZE 2048
 
+/* initial variables */
 time_t start_time;
 
 long int init_num = 1000;
-char init_num_str[2048];
+char init_num_str[STRING_SIZE];
 
+/* struct to store number partials (half / half) */
 struct split_int {
     long int first;
     long int post;
@@ -23,16 +24,23 @@ struct split_int get_split_int(char *number_str) {
     struct split_int output;
     char *first_part;
     char *post_part;
-    int str_length = strlen(number_str);
+    size_t str_length = strlen(number_str);
     int splitter = str_length / 2;
     
-    *(number_str + str_length) = '\0';
+    /* split a number into half */
     post_part = number_str + splitter;
     output.post = atol(post_part);
 
     *(number_str + splitter) = '\0';
     first_part = number_str;
     output.first = atol(first_part);
+
+    /* 
+    DO NOT call free() on pointers that are not created by malloc() or related functions.
+    ref.: https://wiki.sei.cmu.edu/confluence/display/c/MEM34-C.+Only+free+memory+allocated+dynamically
+    */
+    first_part = NULL;
+    post_part = NULL;
 
     return output;
 }
@@ -50,8 +58,9 @@ int main() {
 
         struct split_int split_output;
         split_output = get_split_int(init_num_str);
+        long int compute_part = split_output.first + split_output.post;
 
-        if (pow((split_output.first + split_output.post), 2) == init_num) {
+        if (compute_part * compute_part  == init_num) {
             result_time = time(NULL);
             printf("%ld %ld %ld %ld\n", split_output.first, split_output.post, init_num, result_time - start_time);
         }
