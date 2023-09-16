@@ -225,7 +225,11 @@ int main() {
         if (init_num >= ULLONG_MAX) {
             printf("Hits maximum value of unsigned long long int type: %llu\n", ULLONG_MAX);
             if (lock_filename_fd != -1) {
-                close(lock_filename_fd);
+                if (lock_status == 1) {
+                    unlock_lock(lock_filename_fd);
+                } else {
+                    close(lock_filename_fd);
+                }
             }
             exit (EXIT_SUCCESS);
         }
