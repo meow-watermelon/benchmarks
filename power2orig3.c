@@ -15,6 +15,9 @@ $ gcc -Wall -Wextra -Wpedantic -o power2orig3 power2orig3.c
 #include <time.h>
 #include <unistd.h>
 
+/* initial number */
+#define INITIAL_NUMBER 1000
+
 /* checkpoint filename */
 #define CHECKPOINT_FILENAME "checkpoint"
 
@@ -24,8 +27,8 @@ $ gcc -Wall -Wextra -Wpedantic -o power2orig3 power2orig3.c
 int lock_filename_fd;
 short int lock_status;
 
-/* initialized number */
-unsigned long long int init_num = 1000;
+/* initialized initial number */
+unsigned long long int init_num = INITIAL_NUMBER;
 
 /*
 a function to set exclusive lock
@@ -126,7 +129,7 @@ static void sigint_handler(int signo) {
     if (lock_status == 1) {
         unlock_lock(lock_filename_fd);
     }
-    write_checkpoint(CHECKPOINT_FILENAME);
+    write_checkpoint();
     exit (EXIT_SUCCESS);
 }
 
@@ -197,9 +200,9 @@ int main() {
         }
     }
 
-    /* re-read initialized number from checkpoint file, using original value if the call fails*/
+    /* re-read initial number from checkpoint file, using original value if the call fails*/
     init_num = read_checkpoint();
-    printf("Using initialized number %llu\n", init_num);
+    printf("Using initial number %llu\n", init_num);
 
     if (signal(SIGINT, sigint_handler) == SIG_ERR) {
         perror("ERROR: failed to register SIGINT signal handler");
@@ -218,7 +221,7 @@ int main() {
     }
 
     while (1) {
-        /* exit loop once initialized number is equal to or greater than ULLONG_MAX */
+        /* exit loop once initial number is equal to or greater than ULLONG_MAX */
         if (init_num >= ULLONG_MAX) {
             printf("Hits maximum value of unsigned long long int type: %llu\n", ULLONG_MAX);
             if (lock_filename_fd != -1) {
