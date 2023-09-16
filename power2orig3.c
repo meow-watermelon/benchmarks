@@ -35,7 +35,7 @@ static short int set_lock(int fd) {
     int lock_return = flock(fd, LOCK_EX | LOCK_NB);
 
     if (lock_return == -1) {
-        printf("WARNING: failed to set exclusive lock on lock file: %s\n", LOCK_FILENAME);
+        perror("WARNING: failed to set exclusive lock on lock file");
         close(fd);
         return -1;
     }
@@ -52,7 +52,7 @@ static short int unlock_lock(int fd) {
     int lock_return = flock(fd, LOCK_UN);
 
     if (lock_return == -1) {
-        printf("WARNING: failed to unlock lock on lock file: %s\n", LOCK_FILENAME);
+        perror("WARNING: failed to unlock lock on lock file");
         close(fd);
         return -1;
     }
@@ -70,10 +70,11 @@ static void write_checkpoint() {
     checkpoint = fopen(CHECKPOINT_FILENAME, "w");
 
     if (checkpoint == NULL) {
-        printf("WARNING: unable to open checkpoint file: %s\n", CHECKPOINT_FILENAME);
+        perror("WARNING: unable to open checkpoint file");
         return;
     }
 
+    printf("File Descriptor of checkpoint file for writing: %d\n", fileno(checkpoint));
     int write_return = fprintf(checkpoint, "%llu", init_num);
 
     fflush(checkpoint);
@@ -82,7 +83,7 @@ static void write_checkpoint() {
     if (write_return > 0) {
         printf("Processing number %llu is written to checkpoint file: %s\n", init_num, CHECKPOINT_FILENAME);
     } else {
-        printf("WARNING: failed to write number to checkpoint file: %s\n", CHECKPOINT_FILENAME);
+        perror("WARNING: failed to write number to checkpoint file");
     }
 
     return;
@@ -97,10 +98,11 @@ static unsigned long long int read_checkpoint() {
     checkpoint = fopen(CHECKPOINT_FILENAME, "r");
 
     if (checkpoint == NULL) {
-        printf("WARNING: unable to open checkpoint file: %s\n", CHECKPOINT_FILENAME);
+        perror("WARNING: unable to open checkpoint file");
         return init_num;
     }
 
+    printf("File Descriptor of checkpoint file for reading: %d\n", fileno(checkpoint));
     int read_return = fscanf(checkpoint, "%llu", &number);
 
     fclose(checkpoint);
@@ -109,7 +111,7 @@ static unsigned long long int read_checkpoint() {
         printf("Retrieved checkpoint number %llu from checkpoint file: %s\n", number, CHECKPOINT_FILENAME);
         return number;
     } else {
-        printf("WARNING: failed to retrieve checkpoint number from checkpoint file: %s\n", CHECKPOINT_FILENAME);
+        printf("WARNING: failed to retrieve checkpoint number from checkpoint file");
         return init_num;
     }
 }
@@ -183,12 +185,13 @@ int main() {
     /* set exclusive lock */
     lock_filename_fd = open(LOCK_FILENAME, O_WRONLY | O_CREAT | O_TRUNC, LOCK_FILENAME_PERM);
     if (lock_filename_fd == -1) {
-        printf("WARNING: failed to open lock file: %s\n", LOCK_FILENAME);
+        perror("WARNING: failed to open lock file");
         lock_status = -1;
     } else {
+        printf("File descriptor of lock file: %d\n", lock_filename_fd);
         lock_status = set_lock(lock_filename_fd);
         if (lock_status == -1) {
-            printf("Exclusive lock detected or set lock failed, bail out the program\n");
+            perror("Exclusive lock detected or set lock failed, bail out the program");
             close(lock_filename_fd);
             exit (EXIT_FAILURE);
         }
@@ -199,7 +202,7 @@ int main() {
     printf("Using initialized number %llu\n", init_num);
 
     if (signal(SIGINT, sigint_handler) == SIG_ERR) {
-        printf("ERROR: failed to register SIGINT signal handler\n");
+        perror("ERROR: failed to register SIGINT signal handler");
         if (lock_filename_fd != -1) {
             close(lock_filename_fd);
         }
@@ -207,7 +210,7 @@ int main() {
     }
 
     if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR) {
-        printf("ERROR: failed to register SIGUSR1 signal handler\n");
+        perror("ERROR: failed to register SIGUSR1 signal handler");
         if (lock_filename_fd != -1) {
             close(lock_filename_fd);
         }
