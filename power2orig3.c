@@ -1,6 +1,6 @@
 /*
 # gcc compilation command
-$ gcc -Wall -Wextra -Wpedantic -o power2orig3 power2orig3.c
+$ gcc -g -Wall -Wextra -Wpedantic -o power2orig3 power2orig3.c
 
 !!! this application DOES NOT consider function reentrancy-safe !!!
 */
@@ -243,8 +243,10 @@ int main() {
         unsigned long int post = init_num % partial_multiplier;
 
         if ((first + post) * (first + post) == init_num) {
-            stop_time = time(NULL);
-            printf("%ld %ld %llu %ld\n", first, post, init_num, stop_time - start_time);
+            if (integer_length(first) == integer_length(post)) {
+                stop_time = time(NULL);
+                printf("%ld %ld %llu %ld\n", first, post, init_num, stop_time - start_time);
+            }
         }
 
         ++init_num;
