@@ -18,6 +18,9 @@ $ gcc -g -Wall -Wextra -Wpedantic -o power2orig3 power2orig3.c
 /* initial number */
 #define INITIAL_NUMBER 1000
 
+/* result output filename */
+#define OUTPUT_FILENAME "power2orig.out"
+
 /* checkpoint filename */
 #define CHECKPOINT_FILENAME "checkpoint"
 
@@ -80,14 +83,14 @@ static void write_checkpoint() {
     printf("File Descriptor of checkpoint file for writing: %d\n", fileno(checkpoint));
     int write_return = fprintf(checkpoint, "%llu", init_num);
 
-    fflush(checkpoint);
-    fclose(checkpoint);
-
     if (write_return > 0) {
         printf("Processing number %llu is written to checkpoint file: %s\n", init_num, CHECKPOINT_FILENAME);
+        fflush(checkpoint);
     } else {
         perror("WARNING: failed to write number to checkpoint file");
     }
+
+    fclose(checkpoint);
 
     return;
 }
@@ -245,7 +248,25 @@ int main() {
         if ((first + post) * (first + post) == init_num) {
             if (integer_length(first) == integer_length(post)) {
                 stop_time = time(NULL);
-                printf("%ld %ld %llu %ld\n", first, post, init_num, stop_time - start_time);
+                time_t duration = stop_time - start_time;
+
+                /* prepare the output file*/
+                FILE *output;
+                output = fopen(OUTPUT_FILENAME, "a+");
+
+                if (output == NULL) {
+                    perror("WARNING: unable to open result file");
+                    exit (EXIT_FAILURE);
+                }
+
+                /* write to the output file */
+                fprintf(output, "%ld %ld %llu %ld\n", first, post, init_num, duration);
+                fflush(output);
+                fclose(output);
+
+                /* write to the standard output */
+                fprintf(stdout, "%ld %ld %llu %ld\n", first, post, init_num, duration);
+                fflush(stdout);
             }
         }
 
