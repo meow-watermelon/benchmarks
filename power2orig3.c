@@ -128,6 +128,7 @@ a signal handler to handle SIGINT signal, following operations will be triggered
 2. trigger write_checkpoint() function to write processing number to checkpoint file 
 */
 static void sigint_handler(int signo) {
+    (void)signo;
     printf("\nSIGINT received, stopped at number: %llu\n", init_num);
     if (lock_status == 1) {
         unlock_lock(lock_filename_fd);
@@ -141,6 +142,7 @@ a signal handler to handle SIGUSR1 signal, following operations will be triggere
 1. print the current processing number
 */
 static void sigusr1_handler(int signo) {
+    (void)signo;
     printf("\nSIGUSR1 received, current processing number: %llu\n", init_num);
 }
 
