@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
                         file = fopen("result", "a");
 
                         if (file == NULL) {
-                            perror("failed to write to result file");
+                            perror("failed to open result file");
                         } else {
                             fprintf(file, "child index [%d]: %llu %llu %llu %ld\n", i, first, post, init_num, duration);
                             fflush(file);
