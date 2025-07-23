@@ -1,8 +1,12 @@
+#include <fcntl.h>
 #include <limits.h>
 #include <math.h>
+#include <semaphore.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -10,6 +14,8 @@
 
 #define MIN_NUMBER 2
 #define OUTPUT "prime-number"
+#define SHM_FILENAME "/mp-find-prime-number-shm"
+#define SEM_FILENAME "/mp-find-prime-number"
 
 unsigned long long int min_num = MIN_NUMBER;
 
@@ -26,13 +32,43 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    unsigned long int *prime_counter;
+
     // delete output
     if (unlink(OUTPUT) < 0) {
         perror("failed to unlink output file");
     }
 
+    // set up semaphore
+    sem_t *file_writer_sem;
+    file_writer_sem = sem_open(SEM_FILENAME, O_CREAT | O_EXCL, 0644, 1);
+    if (file_writer_sem == SEM_FAILED) {
+        perror("failed to create a semaphore");
+        exit(EXIT_FAILURE);
+    }
+
+    // set up shared memory
+    int shm_fd;
+    shm_fd = shm_open(SHM_FILENAME, O_CREAT | O_RDWR | O_EXCL, 0644);
+    if (shm_fd < 0) {
+        perror("failed to create a shared memory object");
+        exit(EXIT_FAILURE);
+    }
+
+    ftruncate(shm_fd, sizeof(unsigned long int));
+
+    prime_counter = mmap(NULL, sizeof(unsigned long int), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    if (prime_counter == MAP_FAILED) {
+        perror("failed to create mmap-backed counter");
+        exit(EXIT_FAILURE);
+    }
+
+    close(shm_fd);
+
+    *prime_counter = 0;
+
     // get maximum number limit
-    unsigned long long int max_num = (unsigned long long int)strtol(argv[2], NULL, 10);
+    unsigned long long int max_num = strtoll(argv[2], NULL, 10);
 
     time_t start_time = time(NULL);
 
@@ -111,6 +147,11 @@ int main(int argc, char *argv[]) {
                     stop_time = time(NULL);
                     duration = stop_time - start_time;
 
+                    // TODO: handle counter
+                    sem_wait(file_writer_sem);
+                    ++(*prime_counter);
+                    sem_post(file_writer_sem);
+
                     FILE *file;
                     file = NULL;
 
@@ -144,6 +185,18 @@ int main(int argc, char *argv[]) {
     while ((reaped_pid = waitpid(-1, &status, 0)) > 0) {
         printf("child process PID %d is reaped with status %d\n", reaped_pid, status);
     }
+
+    printf("prime counter: %lu\n", *prime_counter);
+
+    // unmap shared memory region
+    munmap(prime_counter, sizeof(unsigned long int));
+
+    // close and remove semaphore
+    sem_close(file_writer_sem);
+    sem_unlink(SEM_FILENAME);
+
+    // remove shared memory object
+    shm_unlink(SHM_FILENAME);
 
     exit(0);
 }
