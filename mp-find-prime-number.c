@@ -1,3 +1,7 @@
+/*
+ * compilation: gcc -Wall -Wextra -Wpedantic -o mp-find-prime-number mp-find-prime-number.c -lm -lpthread -lrt 
+ */
+
 #include <fcntl.h>
 #include <limits.h>
 #include <math.h>
@@ -147,11 +151,18 @@ int main(int argc, char *argv[]) {
                     stop_time = time(NULL);
                     duration = stop_time - start_time;
 
-                    // TODO: handle counter
+                    // counter increment
+                    int sem_value;
+
+                    // get current semaphore value
+                    sem_getvalue(file_writer_sem, &sem_value);
+                    printf("child index [%d]: semaphore value: %d\n", i, sem_value);
+
                     sem_wait(file_writer_sem);
                     ++(*prime_counter);
                     sem_post(file_writer_sem);
 
+                    // write output
                     FILE *file;
                     file = NULL;
 
