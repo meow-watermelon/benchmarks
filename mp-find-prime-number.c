@@ -156,7 +156,10 @@ int main(int argc, char *argv[]) {
 
                     // get current semaphore value
                     sem_getvalue(file_writer_sem, &sem_value);
-                    printf("child index [%d]: semaphore value: %d\n", i, sem_value);
+
+                    if (sem_value == 0) {
+                        printf("child index [%d] - concurrent writers detected: semaphore value: %d\n", i, sem_value);
+                    }
 
                     sem_wait(file_writer_sem);
                     ++(*prime_counter);
