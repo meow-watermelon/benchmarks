@@ -2,10 +2,12 @@
  * compilation: gcc -Wall -Wextra -Wpedantic -o mp-find-prime-number mp-find-prime-number.c -lm -lpthread -lrt 
  */
 
+#define _GNU_SOURCE
 #include <fcntl.h>
 #include <limits.h>
 #include <math.h>
 #include <semaphore.h>
+#include <sched.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +39,34 @@ int main(int argc, char *argv[]) {
     }
 
     unsigned long int *prime_counter;
+
+    long int procs = strtol(argv[1], NULL, 10);
+
+    // get number of online processors
+    int cpu_online = sysconf(_SC_NPROCESSORS_ONLN);
+
+    if (procs > cpu_online) {
+        printf("WARNING: parallelism count %ld is greater than number of online processors %d\n", procs, cpu_online);
+        exit(EXIT_FAILURE);
+    }
+
+    // set up CPU affinity variables
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    sched_getaffinity(0, sizeof(set), &set);
+
+    // compare number of CPU affinity bits and number of system-wise online CPU
+    int cpu_affinity_count = 0;
+    for (int c = 0; c < CPU_SETSIZE; ++c) {
+        if (CPU_ISSET(c, &set)) {
+            ++cpu_affinity_count;
+        }
+    }
+
+    if (cpu_affinity_count != cpu_online) {
+        printf("ERROR: CPU affinity bits count %d is not equal to number of system-wise online CPU %d\n", cpu_affinity_count, cpu_online);
+        exit(EXIT_FAILURE);
+    }
 
     // delete output
     if (unlink(OUTPUT) < 0) {
@@ -80,18 +110,9 @@ int main(int argc, char *argv[]) {
     ppid = getppid();
     printf("parent PID: %d\n", ppid);
 
-    long int procs = strtol(argv[1], NULL, 10);
-
     // get process group id
     pid_t proc_group_id = getpgrp();
     printf("process group ID: %d\n", proc_group_id);
-
-    // get number of online processors
-    int cpu_online = sysconf(_SC_NPROCESSORS_ONLN);
-
-    if (procs > cpu_online) {
-        printf("WARNING: parallelism count %ld is greater than number of online processors %d\n", procs, cpu_online);
-    }
 
     unsigned long long int range = max_num - min_num + 1;
     unsigned long long int element = range / procs;
@@ -100,9 +121,24 @@ int main(int argc, char *argv[]) {
     printf("range: %llu element: %llu mod %llu\n", range, element, mod);
 
     // create some children
-    for (int i = 0; i < procs; ++i) {
-        pid_t child_pid;
+    int i = 0;
+    for (int cpu_count = 0; cpu_count < CPU_SETSIZE; ++cpu_count) {
+        // exit loop if number of required online CPUs is equal to input parallelism
+        if (i >= procs) {
+            break;
+        }
 
+        // test if CPU is online and available
+        if (CPU_ISSET(cpu_count, &set)) {
+            ++i;
+        } else {
+            // CPU is not online / available
+            continue;
+        }
+
+        printf("CPU %d is online\n", cpu_count);
+
+        pid_t child_pid;
         child_pid = fork();
 
         if (child_pid > 0) {
@@ -110,14 +146,22 @@ int main(int argc, char *argv[]) {
         }
 
         if (child_pid == 0) {
+            // set CPU affinity
+            cpu_set_t child_set;
+            CPU_ZERO(&child_set);
+            CPU_SET(cpu_count, &child_set);
+            sched_setaffinity(0, sizeof(child_set), &child_set);
+            printf("child index [%d] is bound to CPU [%d]\n", i, cpu_count);
+
+            // install signal handler
             if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR) {
                 perror("failed to install SIGUSR1 signal handler");
             }
 
-            unsigned long long int init_num = min_num + (i * element);
+            unsigned long long int init_num = min_num + ((i - 1) * element);
             unsigned long long int end_num;
 
-            if (i == (procs - 1)) {
+            if (i == procs) {
                 end_num = init_num + element + mod - 1;
             } else {
                 end_num = init_num + element - 1;
