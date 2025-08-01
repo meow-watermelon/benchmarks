@@ -19,7 +19,9 @@
 #include <unistd.h>
 
 #define MIN_NUMBER 2
+#ifdef SAVENUMBER
 #define OUTPUT "prime-number"
+#endif
 #define SHM_FILENAME "/mp-find-prime-number-shm"
 #define SEM_FILENAME "/mp-find-prime-number"
 
@@ -68,10 +70,12 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+#ifdef SAVENUMBER
     // delete output
     if (unlink(OUTPUT) < 0) {
         perror("failed to unlink output file");
     }
+#endif
 
     // set up semaphore
     sem_t *file_writer_sem;
@@ -104,7 +108,9 @@ int main(int argc, char *argv[]) {
     // get maximum number limit
     unsigned long long int max_num = strtoll(argv[2], NULL, 10);
 
+#ifdef SAVENUMBER
     time_t start_time = time(NULL);
+#endif
 
     pid_t ppid;
     ppid = getppid();
@@ -190,10 +196,12 @@ int main(int argc, char *argv[]) {
 
                 // a prime number is found
                 if (counter == 0) {
+#ifdef SAVENUMBER
                     time_t stop_time;
                     time_t duration;
                     stop_time = time(NULL);
                     duration = stop_time - start_time;
+#endif
 
                     // counter increment
                     int sem_value;
@@ -208,7 +216,7 @@ int main(int argc, char *argv[]) {
                     sem_wait(file_writer_sem);
                     ++(*prime_counter);
                     sem_post(file_writer_sem);
-
+#ifdef SAVENUMBER
                     // write output
                     FILE *file;
                     file = NULL;
@@ -223,6 +231,7 @@ int main(int argc, char *argv[]) {
                         fsync(fileno(file));
                         fclose(file);
                     }
+#endif
                 }
 
                 ++init_num;
