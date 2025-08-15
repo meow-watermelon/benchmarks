@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
     *prime_counter = 0;
 
     // get maximum number limit
-    unsigned long long int max_num = strtoll(argv[2], NULL, 10);
+    unsigned long long int max_num = strtoull(argv[2], NULL, 10);
 
 #ifdef SAVENUMBER
     time_t start_time = time(NULL);
