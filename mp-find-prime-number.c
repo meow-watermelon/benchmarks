@@ -126,6 +126,11 @@ int main(int argc, char *argv[]) {
 
     printf("range: %llu element: %llu mod %llu\n", range, element, mod);
 
+    // install signal handler
+    if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR) {
+        perror("failed to install SIGUSR1 signal handler");
+    }
+
     // create some children
     int i = 0;
     for (int cpu_count = 0; cpu_count < CPU_SETSIZE; ++cpu_count) {
@@ -158,11 +163,6 @@ int main(int argc, char *argv[]) {
             CPU_SET(cpu_count, &child_set);
             sched_setaffinity(0, sizeof(child_set), &child_set);
             printf("child index [%d] is bound to CPU [%d]\n", i, cpu_count);
-
-            // install signal handler
-            if (signal(SIGUSR1, sigusr1_handler) == SIG_ERR) {
-                perror("failed to install SIGUSR1 signal handler");
-            }
 
             unsigned long long int init_num = min_num + ((i - 1) * element);
             unsigned long long int end_num;
